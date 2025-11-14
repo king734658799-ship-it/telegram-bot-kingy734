@@ -1,59 +1,54 @@
 import os
 import logging
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
-from apscheduler.schedulers.background import BackgroundScheduler
-from datetime import datetime
+from telegram.ext import Application, CommandHandler, ContextTypes
 
-# إعدادات السجلّات
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
-)
-logger = logging.getLogger(__name__)
+# التوكن من متغيرات البيئة
+BOT_TOKEN = os.environ.get('BOT_TOKEN')
 
-# قراءة التوكن و ID من متغيرات البيئة
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-OWNER_ID = int(os.getenv("OWNER_ID", "0"))
-
-# إنشاء التطبيق
-app = ApplicationBuilder().token(BOT_TOKEN).build()
-
-# مجدول للمهام التلقائية
-scheduler = BackgroundScheduler()
-
-# أمر البداية
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("✅ البوت جاهز ويعمل 24/7!\nاستخدم /report لعرض تقرير الآن.")
+    user = update.message.from_user
+    await update.message.reply_text(
+        f"🎯 **مرحباً {user.first_name}!**\n\n"
+        "🤖 **أنا البوت الذكي لأبو علي**\n\n"
+        "✅ **الميزات المتاحة:**\n"
+        "• تحليل البوتات الذكي\n"
+        "• إدارة المحافظ\n"
+        "• نظام الإحالات\n"
+        "• إدارة المشاريع\n"
+        "• تقارير تلقائية\n\n"
+        "🚀 **البوت يعمل على Render بنجاح!**",
+        parse_mode='Markdown'
+    )
 
-# أمر التقرير
-async def report(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != OWNER_ID:
-        await update.message.reply_text("❌ غير مصرح لك باستخدام هذا الأمر.")
+async def analyze(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "🔍 **نظام تحليل البوتات جاهز**\n\n"
+        "أرسل username أي بوت لتحليله!",
+        parse_mode='Markdown'
+    )
+
+def main():
+    # إعداد التسجيل
+    logging.basicConfig(level=logging.INFO)
+    
+    if not BOT_TOKEN:
+        logging.error("❌ BOT_TOKEN غير موجود!")
         return
-    report_text = f"📊 تقرير الساعة {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\nكل شيء يعمل بنجاح ✅"
-    await update.message.reply_text(report_text)
+    
+    try:
+        application = Application.builder().token(BOT_TOKEN).build()
+        
+        # إضافة الأوامر
+        application.add_handler(CommandHandler("start", start))
+        application.add_handler(CommandHandler("analyze", analyze))
+        
+        # بدء البوت
+        application.run_polling()
+        logging.info("✅ البوت يعمل على Render!")
+        
+    except Exception as e:
+        logging.error(f"❌ خطأ: {e}")
 
-# مهمة مجدولة ترسل تقرير كل ساعة تلقائياً
-async def scheduled_report():
-    if OWNER_ID != 0:
-        try:
-            await app.bot.send_message(chat_id=OWNER_ID,
-                text=f"⏰ تقرير تلقائي الساعة {datetime.now().strftime('%H:%M')}")
-        except Exception as e:
-            logger.error(f"خطأ في إرسال التقرير التلقائي: {e}")
-
-async def main():
-    # إضافة الأوامر
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("report", report))
-
-    # تشغيل المجدول
-    scheduler.add_job(lambda: app.create_task(scheduled_report()), "interval", hours=1)
-    scheduler.start()
-
-    # تشغيل البوت
-    await app.run_polling()
-
-if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())
+if __name__ == '__main__':
+    main()
